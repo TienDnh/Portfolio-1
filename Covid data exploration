@@ -1,0 +1,53 @@
+select * from [dbo].[CovidDeaths]
+--totalcases by iso_code but still show list of location, pop, date
+select iso_code, location, population, date, sum(cast(total_cases as float )) over (partition by iso_code) as peakcases
+, count(*) over (partition by iso_code) as datenobycode
+from CovidDeaths 
+order by 5 desc 
+
+-- ranking total cases within individual iso_code by date
+select row_number() over (partition by iso_code order by total_cases desc) as row_num,iso_code, date, total_cases
+from CovidDeaths
+order by 4
+
+select rank() over (partition by iso_code order by total_cases desc) as row_num,iso_code, date, total_cases
+from CovidDeaths
+order by 1, 4 desc
+
+--deathcountrate by location and pop.
+select location, population, sum(cast(total_deaths as float))/population deathcountrate
+from CovidDeaths
+group by location, population
+order by deathcountrate desc
+
+
+--cal rolling pepple vaccinated by poppulation
+--CTE
+with vacvspp
+as (
+select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations, 
+sum(convert(real, new_vaccinations)) over (partition by dea.location order by dea.date) as rollingppvaccinated 
+from [dbo].[CovidDeaths] as dea
+join [dbo].['CovidVacination'] as vac
+on dea.location = vac.location and dea.date= vac.date)
+
+select *, (rollingppvaccinated/population)*100 as rollingrate from vacvspp
+where new_vaccinations is not null
+
+--TEMP Table
+drop table if exists #test
+create table #test
+(location varchar(255),
+date numeric,
+vac int)
+
+insert into #test 
+values ('a', 1,4), ('a',2, 3), ('',1,2),('b',3,0),('b',2,1)
+
+
+select *, sum (vac) over (partition by location order by date) as vacrolling
+from #test
+
+--test count with null vs ''
+select count(location)
+from #test
