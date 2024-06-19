@@ -14,6 +14,9 @@ select rank() over (partition by iso_code order by total_cases desc) as row_num,
 from CovidDeaths
 order by 1, 4 desc
 
+select dense_rank() over (partition by iso_code order by total_cases desc) as row_num,iso_code, date, total_cases
+from CovidDeaths
+
 --deathcountrate by location and pop.
 select location, population, sum(cast(total_deaths as float))/population deathcountrate
 from CovidDeaths
